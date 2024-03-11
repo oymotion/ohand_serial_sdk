@@ -1,7 +1,7 @@
 
 # ROH Serial API Example
 
-Example for ROH simple control.
+Scan ans set ID for ROH.
 
 Ubuntu 22.04
 gcc version 11.4.0
@@ -64,7 +64,7 @@ d:\serial
 ```BASH
 source /usr/local/serial/setup.bash  # for serial lib
 
-cd /path/to/ohand_serial/simple_control
+cd /path/to/ohand_serial/scan_and_set_id
 mkdir build && cd build
 cmake ..
 make
