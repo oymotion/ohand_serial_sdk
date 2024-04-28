@@ -9,7 +9,7 @@
 
 using namespace std;
 
-//----------------oHand-----------------//
+//----------------OHand-----------------//
 #define ADDRESS_MASTER 0x01
 #define ADDRESS_HAND 0x02
 
@@ -165,9 +165,9 @@ void setup()
     {
       printf("major_ver: 0x%02d\n", major_ver);
 
-      if (major_ver != FW_VER_MAJOR)
+      if (major_ver < FW_VER_MAJOR_MIN || major_ver > FW_VER_MAJOR_MAX)
       {
-        printf("oHand firmware version '0x%02x' not matches SDK's '0x%02x'\n", major_ver, FW_VER_MAJOR);
+        printf("OHand firmware version '0x%02x' not matches SDK's '0x%02x'-'0x%02x'\n", major_ver, FW_VER_MAJOR_MIN, FW_VER_MAJOR_MAX);
 
         exit(-1);
       }
@@ -196,28 +196,28 @@ void setup()
 #endif
 
   // Open thumb
-  err = HAND_FingerMove(ADDRESS_HAND, 0, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(ADDRESS_HAND, 0, 0, 255, errorHandler);
   if (err != HAND_RESP_SUCCESS)
   {
-    printf("HAND_FingerMove() returned 0x%02x\n", err);
+    printf("HAND_SetFingerPos() returned 0x%02x\n", err);
   }
 
   // Open others
   for (int i = 1; i < NUM_FINGERS; i++)
   {
-    err = HAND_FingerMove(ADDRESS_HAND, i, 0, 255, errorHandler);
+    err = HAND_SetFingerPos(ADDRESS_HAND, i, 0, 255, errorHandler);
     if (err != HAND_RESP_SUCCESS)
     {
-      printf("HAND_FingerMove() returned 0x%02x\n", err);
+      printf("HAND_SetFingerPos() returned 0x%02x\n", err);
     }
   }
 
 #ifdef HAS_THUMB_ROOT_MOTOR
   // Open thumb root
-  err = HAND_FingerMove(ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, errorHandler);
   if (err != HAND_RESP_SUCCESS)
   {
-    printf("HAND_FingerMove() returned 0x%02x\n", err);
+    printf("HAND_SetFingerPos() returned 0x%02x\n", err);
   }
 #endif
 }
@@ -228,28 +228,28 @@ void loop()
   uint8_t err;
 
   // Close thumb
-  err = HAND_FingerMove(ADDRESS_HAND, 0, 65535, 255, errorHandler);
+  err = HAND_SetFingerPos(ADDRESS_HAND, 0, 65535, 255, errorHandler);
   if (err != HAND_RESP_SUCCESS)
   {
-    printf("HAND_FingerMove() returned 0x%02x\n", err);
+    printf("HAND_SetFingerPos() returned 0x%02x\n", err);
   }
   delay(1500);
 
   // Open thumb
-  err = HAND_FingerMove(ADDRESS_HAND, 0, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(ADDRESS_HAND, 0, 0, 255, errorHandler);
   if (err != HAND_RESP_SUCCESS)
   {
-    printf("HAND_FingerMove() returned 0x%02x\n", err);
+    printf("HAND_SetFingerPos() returned 0x%02x\n", err);
   }
   delay(1500);
 
   // Close other fingers one by one
   for (i = 1; i < NUM_FINGERS; i++)
   {
-    err = HAND_FingerMove(ADDRESS_HAND, i, 65535, 255, errorHandler);
+    err = HAND_SetFingerPos(ADDRESS_HAND, i, 65535, 255, errorHandler);
     if (err != HAND_RESP_SUCCESS)
     {
-      printf("HAND_FingerMove() returned 0x%02x\n", err);
+      printf("HAND_SetFingerPos() returned 0x%02x\n", err);
     }
     delay(200);
   }
@@ -259,10 +259,10 @@ void loop()
   // Open other fingers one by one
   for (i = NUM_FINGERS - 1; i > 0; i--)
   {
-    err = HAND_FingerMove(ADDRESS_HAND, i, 0, 255, errorHandler);
+    err = HAND_SetFingerPos(ADDRESS_HAND, i, 0, 255, errorHandler);
     if (err != HAND_RESP_SUCCESS)
     {
-      printf("HAND_FingerMove() returned 0x%02x\n", err);
+      printf("HAND_SetFingerPos() returned 0x%02x\n", err);
     }
     delay(200);
   }
@@ -271,18 +271,18 @@ void loop()
 
 #ifdef HAS_THUMB_ROOT_MOTOR
   // Close thumb root
-  err = HAND_FingerMove(ADDRESS_HAND, THUMB_ROOT_ID, 65535, 255, errorHandler);
+  err = HAND_SetFingerPos(ADDRESS_HAND, THUMB_ROOT_ID, 65535, 255, errorHandler);
   if (err != HAND_RESP_SUCCESS)
   {
-    printf("HAND_FingerMove() returned 0x%02x\n", err);
+    printf("HAND_SetFingerPos() returned 0x%02x\n", err);
   }
   delay(1500);
 
   // Open thumb root
-  err = HAND_FingerMove(ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, errorHandler);
   if (err != HAND_RESP_SUCCESS)
   {
-    printf("HAND_FingerMove() returned 0x%02x\n", err);
+    printf("HAND_SetFingerPos() returned 0x%02x\n", err);
   }
   delay(1500);
 #endif

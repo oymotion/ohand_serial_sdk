@@ -8,6 +8,10 @@ project(set_id)
 
 set(EXECUTABLE_NAME ${PROJECT_NAME})
 
+# 统一CMAKE_HOST_SYSTEM_PROCESSOR
+string(REPLACE "AMD64" "x86_64" CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR})
+
+
 if(UNIX)
     # find_package(PkgConfig REQUIRED)
     find_package(PkgConfig REQUIRED)
@@ -69,22 +73,21 @@ include_directories(
 
 
 ## library
-# if(UNIX)
-#     set(OHAND_SERIAL_LIBRARY libROHSerialAPIStatic.a)
-# elseif(WIN32)
-#     set(OHAND_SERIAL_LIBRARY ROHSerialAPIStatic.lib)
-# else()
-#     message(ERROR "UNKNOWN COMPILER")
-# endif()
-# set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
+find_library(OHAND_LIBRARY_RELEASE
+             NAMES ROHSerialAPIStatic
+             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/Release)
 
-find_library(ohand_LIBRARIES
-    NAMES ROHSerialAPIStatic
-    HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib
-    REQUIRED
+find_library(OHAND_LIBRARY_DEBUG
+             NAMES ROHSerialAPIStatic
+             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/Debug)
+
+set(ohand_LIBRARIES
+    debug ${OHAND_LIBRARY_DEBUG}
+    optimized ${OHAND_LIBRARY_RELEASE}
 )
 
 message ("ohand_LIBRARIES: " ${ohand_LIBRARIES})
+
 
 ## files
 file(GLOB SRCS src/*.c src/*.cpp src/*.cc)  # a variable called SRCS with all files whose path match "*.c *.cpp..."

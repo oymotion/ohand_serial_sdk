@@ -1,14 +1,13 @@
 
 # ROH Serial API Example
 
-Scan ans set ID for ROH.
+Example for ROH simple control.
 
-Ubuntu 22.04
-gcc version 11.4.0
+## 1. Linux
 
-## Install serial lib
+Ubuntu 22 + gcc version 11
 
-### Linux
+### 1.1. Install serial lib
 
 ```BASH
 cd ~
@@ -31,7 +30,26 @@ make
 sudo make install
 ```
 
-### Windows
+### 1.2. Compile
+
+```BASH
+source /usr/local/serial/setup.bash  # for serial lib
+
+cd /path/to/ohand_serial/simple_control
+mkdir build && cd build
+cmake ..
+make
+```
+
+### 1.3. Run
+
+```BASH
+./set_id /dev/ttyx           # Run, replace ttyx with real port name
+```
+
+## 2. Windows
+
+### 2.1. Install serial lib
 
 Clone https://github.com/wjwwood/serial and open file visual_studio/visual_studio.sln in repository dir then compile.
 Put files to the same partition as your ohand_serial_sdk, e.g., d:\
@@ -59,19 +77,29 @@ d:\serial
             serial.pdb
 ```
 
-## Compile
+### 2.2. Compile
 
-```BASH
-source /usr/local/serial/setup.bash  # for serial lib
+```BATCH
 
-cd /path/to/ohand_serial/scan_and_set_id
-mkdir build && cd build
+cd path_to_project
+md build
+cd build
 cmake ..
-make
+
+REM Compiles debug version
+cmake --build . --config Debug
+
+REM Compiles release version
+cmake --build . --config Release
+
 ```
 
-## Run
+### 2.3. Run
 
-```BASH
-./simple_control /dev/ttyx           # Run, replace ttyx with real port name
+```BATCH
+cd path_to_project/build/Debug
+REM Or 'Release'
+
+REM Run, replace COMx with real port name
+set_id COMx
 ```

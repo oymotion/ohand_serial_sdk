@@ -9,7 +9,7 @@
 
 using namespace std;
 
-//----------------oHand-----------------//
+//----------------OHand-----------------//
 #define ADDRESS_MASTER 0x01
 #define ADDRESS_HAND 0x02
 
