@@ -586,7 +586,7 @@ uint8_t HAND_FingerStop(uint8_t hand_id, uint8_t finger_id_bits, HAND_NODE_ERROR
   * @retval -HAND_RESP_SUCCESS: success
   *         -Others: failed, see definition of API return values
   */
-uint8_t HAND_SetFingerPosAbs(uint8_t hand_id, uint8_t finger_id, uint16_t raw_pos, uint16_t speed, HAND_NODE_ERROR_CALLBACK error_callback);
+uint8_t HAND_SetFingerPosAbs(uint8_t hand_id, uint8_t finger_id, uint16_t raw_pos, uint8_t speed, HAND_NODE_ERROR_CALLBACK error_callback);
 
 
 /**
