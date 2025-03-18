@@ -44,8 +44,8 @@ make
 ### 1.3. Run
 
 ```BASH
-cd path/to/project/build/Debug      # Or 'Release'
-./simple_control /dev/ttyx          # Run, replace ttyx with real port name
+cd path/to/project/build/Debug  # Or 'Release'
+./grip_exec /dev/ttyx           # Run, replace ttyx with real port name
 ```
 
 ## 2. Windows
@@ -98,9 +98,9 @@ cmake --build . --config Release
 ### 2.3. Run
 
 ```BATCH
-cd path\to\project\build\Debug
+cd cd path\to\project\build\Debug
 REM Or 'Release'
 
 REM Run, replace COMx with real port name
-simple_control COMx
+grip_exec COMx
 ```

@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.5)
 set (CMAKE_CXX_STANDARD 11)
 
-project(simple_control)
+project(custom_cmd_test)
 
 set(EXECUTABLE_NAME ${PROJECT_NAME})
 

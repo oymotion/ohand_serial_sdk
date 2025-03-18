@@ -29,10 +29,10 @@ using namespace std;
 #ifdef SET_PID
 static const float _pidGains[][4] = {
     {100.00, 2.00, 250.00, 1.00},
-    {100.00, 2.00, 250.00, 0.25},
-    {100.00, 2.00, 250.00, 0.25},
-    {100.00, 2.00, 250.00, 0.25},
-    {100.00, 2.00, 250.00, 0.25},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
 #ifdef HAS_THUMB_ROOT_MOTOR
     {100.00, 2.00, 250.00, 1.00}
 #endif
@@ -42,12 +42,13 @@ static const float _pidGains[][4] = {
 //----------------global variable-----------------//
 serial::Serial *serial_port = NULL;
 
+void* hand_ctx = NULL;
+
 //----------------system functions-----------------//
 uint32_t millis();
 void delay(uint32_t millisecondsToWait);
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t len);
-void recvDataUART();
-void errorHandler(uint8_t node_addr, uint8_t err);
+void sendDataUART(uint8_t addr, uint8_t *data, uint8_t len, void *hand_ctx);
+void recvDataUART(void *hand_ctx);
 
 void setup();
 void loop();
@@ -65,7 +66,15 @@ int main(int argc, char *argv[])
 
   printf("serial port name: '%s'\n", serial_port_name);
 
-  serial_port = new serial::Serial(serial_port_name, 115200, serial::Timeout::simpleTimeout(300));
+  try
+  {
+    serial_port = new serial::Serial(serial_port_name, 115200, serial::Timeout::simpleTimeout(300));
+  }
+  catch (serial::IOException e)
+  {
+    printf("Open serial failed: %s\n", e.what());
+    exit(-1);
+  }
 
   printf("serial port '%s' open? %s.\n", serial_port_name, (serial_port->isOpen() ? "Yes" : "No"));
 
@@ -87,7 +96,7 @@ int main(int argc, char *argv[])
   serial_port->close();
   delete serial_port;
 
-  printf("program exit success \n");
+  printf("program exit with success\n");
   exit(0);
 }
 
@@ -108,22 +117,26 @@ void delay(uint32_t millisecondsToWait)
   this_thread::sleep_for(chrono::milliseconds(millisecondsToWait));
 }
 
-void recvDataUART()
+void recvDataUART(void* hand_ctx)
 {
   uint8_t data = 0;
 
-  while (serial_port->available() != 0)
+  auto port = *(serial::Serial**)hand_ctx;
+
+  while (port->available() != 0)
   {
-    serial_port->read(&data, 1);
+    port->read(&data, 1);
     // printf("receive : data = 0x%x \n" , data);
-    HAND_OnData(data);
+    HAND_OnData(hand_ctx, data);
   }
 }
 
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t size)
+void sendDataUART(uint8_t addr, uint8_t* data, uint8_t size, void* hand_ctx)
 {
   // printf("sendDataUART: byte size = %d \n" , len);
   vector<uint8_t> dataVector;
+
+  auto port = *(serial::Serial**)hand_ctx;
 
   for (int i = 0; i < size; i++)
   {
@@ -131,17 +144,13 @@ void sendDataUART(uint8_t addr, uint8_t *data, uint8_t size)
     dataVector.push_back(data[i]);
   }
 
-  serial_port->write(dataVector);
+  port->write(dataVector);
 }
 
-void errorHandler(uint8_t node_addr, uint8_t err)
-{
-  printf("NODE: 0x%02x, ERROR: 0x%02x\n", node_addr, err);
-}
 
 void setup()
 {
-  uint8_t err;
+  uint8_t err, remote_err;
 
   printf("Waiting 4 seconds for OHand ready...\n");
 
@@ -149,25 +158,24 @@ void setup()
 
   printf("Begin.\n");
 
-  HAND_SetDataInterface(HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART); // For non-interrupt receive mode, specify receive function.
-  HAND_SetCommandTimeOut(255);
+  hand_ctx = HAND_CreateContext(serial_port, HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART); // For non-interrupt receive mode, specify receive function.
+  HAND_SetCommandTimeOut(hand_ctx, 255);
   HAND_SetTimerFunction(millis, delay);
 
   do
   {
     uint8_t major_ver, minor_ver;
-    uint16_t revision;
 
-    err = HAND_GetFirmwareVersion(ADDRESS_HAND, &major_ver, &minor_ver, &revision, errorHandler);
-    printf("HAND_GetFirmwareVersion() returned 0x%02x\n", err);
+    err = HAND_GetProtocolVersion(hand_ctx, ADDRESS_HAND, &major_ver, &minor_ver, &remote_err);
+    printf("HAND_GetProtocolVersion() returned 0x%02x\n", err);
 
     if (err == HAND_RESP_SUCCESS)
     {
       printf("major_ver: 0x%02d\n", major_ver);
 
-      if (major_ver < FW_VER_MAJOR_MIN || major_ver > FW_VER_MAJOR_MAX)
+      if (major_ver != PROTOCOL_VERSION_MAJOR)
       {
-        printf("OHand firmware version '0x%02x' not matches SDK's '0x%02x'-'0x%02x'\n", major_ver, FW_VER_MAJOR_MIN, FW_VER_MAJOR_MAX);
+        printf("OHand firmware version '0x%02x' not matches SDK's '0x%02x'\n", major_ver, PROTOCOL_VERSION_MAJOR);
 
         exit(-1);
       }
@@ -184,7 +192,7 @@ void setup()
   {
     do
     {
-      err = HAND_SetFingerPID(ADDRESS_HAND, i, _pidGains[i][0], _pidGains[i][1], _pidGains[i][2], _pidGains[i][3], errorHandler);
+      err = HAND_SetFingerPID(ADDRESS_HAND, i, _pidGains[i][0], _pidGains[i][1], _pidGains[i][2], _pidGains[i][3], &remote_err);
 
       if (err != HAND_RESP_SUCCESS)
       {
@@ -196,7 +204,7 @@ void setup()
 #endif
 
   // Open thumb
-  err = HAND_SetFingerPos(ADDRESS_HAND, 0, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, 0, 0, 255, &remote_err);
   if (err != HAND_RESP_SUCCESS)
   {
     printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -205,7 +213,7 @@ void setup()
   // Open others
   for (int i = 1; i < NUM_FINGERS; i++)
   {
-    err = HAND_SetFingerPos(ADDRESS_HAND, i, 0, 255, errorHandler);
+    err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, i, 0, 255, &remote_err);
     if (err != HAND_RESP_SUCCESS)
     {
       printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -214,7 +222,7 @@ void setup()
 
 #ifdef HAS_THUMB_ROOT_MOTOR
   // Open thumb root
-  err = HAND_SetFingerPos(ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, &remote_err);
   if (err != HAND_RESP_SUCCESS)
   {
     printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -225,10 +233,10 @@ void setup()
 void loop()
 {
   uint8_t i;
-  uint8_t err;
+  uint8_t err, remote_err;
 
   // Close thumb
-  err = HAND_SetFingerPos(ADDRESS_HAND, 0, 65535, 255, errorHandler);
+  err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, 0, 65535, 255, &remote_err);
   if (err != HAND_RESP_SUCCESS)
   {
     printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -236,7 +244,7 @@ void loop()
   delay(1500);
 
   // Open thumb
-  err = HAND_SetFingerPos(ADDRESS_HAND, 0, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, 0, 0, 255, &remote_err);
   if (err != HAND_RESP_SUCCESS)
   {
     printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -246,7 +254,7 @@ void loop()
   // Close other fingers one by one
   for (i = 1; i < NUM_FINGERS; i++)
   {
-    err = HAND_SetFingerPos(ADDRESS_HAND, i, 65535, 255, errorHandler);
+    err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, i, 65535, 255, &remote_err);
     if (err != HAND_RESP_SUCCESS)
     {
       printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -259,7 +267,7 @@ void loop()
   // Open other fingers one by one
   for (i = NUM_FINGERS - 1; i > 0; i--)
   {
-    err = HAND_SetFingerPos(ADDRESS_HAND, i, 0, 255, errorHandler);
+    err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, i, 0, 255, &remote_err);
     if (err != HAND_RESP_SUCCESS)
     {
       printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -271,7 +279,7 @@ void loop()
 
 #ifdef HAS_THUMB_ROOT_MOTOR
   // Close thumb root
-  err = HAND_SetFingerPos(ADDRESS_HAND, THUMB_ROOT_ID, 65535, 255, errorHandler);
+  err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, THUMB_ROOT_ID, 65535, 255, &remote_err);
   if (err != HAND_RESP_SUCCESS)
   {
     printf("HAND_SetFingerPos() returned 0x%02x\n", err);
@@ -279,7 +287,7 @@ void loop()
   delay(1500);
 
   // Open thumb root
-  err = HAND_SetFingerPos(ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, errorHandler);
+  err = HAND_SetFingerPos(hand_ctx, ADDRESS_HAND, THUMB_ROOT_ID, 0, 255, &remote_err);
   if (err != HAND_RESP_SUCCESS)
   {
     printf("HAND_SetFingerPos() returned 0x%02x\n", err);

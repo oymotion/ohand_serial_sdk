@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include <conio.h>
 #include <chrono>
 #include <thread>
 
@@ -8,6 +9,12 @@
 #include "OHandSerialAPI.h"
 
 using namespace std;
+
+#ifdef _MSC_VER
+#define kbhit _kbhit
+#define getch _getch
+#endif
+
 
 //----------------OHand-----------------//
 #define ADDRESS_MASTER 0x01
@@ -29,10 +36,10 @@ using namespace std;
 #ifdef SET_PID
 static const float _pidGains[][4] = {
     {100.00, 2.00, 250.00, 1.00},
-    {100.00, 2.00, 250.00, 0.25},
-    {100.00, 2.00, 250.00, 0.25},
-    {100.00, 2.00, 250.00, 0.25},
-    {100.00, 2.00, 250.00, 0.25},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
 #ifdef HAS_THUMB_ROOT_MOTOR
     {100.00, 2.00, 250.00, 1.00}
 #endif
@@ -43,14 +50,15 @@ static const float _pidGains[][4] = {
 serial::Serial *serial_port = NULL;
 
 uint8_t node_ids[256] = {0};
-uint8_t node_cnt = 0;
+uint16_t node_cnt = 0;
+
+void* hand_ctx = NULL;
 
 //----------------system functions-----------------//
 uint32_t millis();
 void delay(uint32_t millisecondsToWait);
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t len);
-void recvDataUART();
-void errorHandler(uint8_t node_addr, uint8_t err);
+void sendDataUART(uint8_t addr, uint8_t *data, uint8_t len, void *hand_ctx);
+void recvDataUART(void *hand_ctx);
 
 void setup();
 void loop();
@@ -111,19 +119,21 @@ void delay(uint32_t millisecondsToWait)
   this_thread::sleep_for(chrono::milliseconds(millisecondsToWait));
 }
 
-void recvDataUART()
+void recvDataUART(void *hand_ctx)
 {
   uint8_t data = 0;
 
-  while (serial_port->available() != 0)
+  auto port = *(serial::Serial**)hand_ctx;
+
+  while (port->available() != 0)
   {
-    serial_port->read(&data, 1);
+    port->read(&data, 1);
     // printf("receive : data = 0x%x \n" , data);
-    HAND_OnData(data);
+    HAND_OnData(hand_ctx, data);
   }
 }
 
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t size)
+void sendDataUART(uint8_t addr, uint8_t *data, uint8_t size, void* hand_ctx)
 {
   // printf("sendDataUART: byte size = %d \n" , len);
   vector<uint8_t> dataVector;
@@ -134,27 +144,21 @@ void sendDataUART(uint8_t addr, uint8_t *data, uint8_t size)
     dataVector.push_back(data[i]);
   }
 
-  serial_port->write(dataVector);
+  auto port = *(serial::Serial**)hand_ctx;
+
+  port->write(dataVector);
 }
 
-void errorHandler(uint8_t node_addr, uint8_t err)
-{
-  printf("NODE: 0x%02x, ERROR: 0x%02x\n", node_addr, err);
-}
 
 void setup()
 {
-  uint8_t err;
+  uint8_t err, remote_err;
 
-  printf("Waiting 4 seconds for OHand ready...\n");
-
-  delay(4000); // Let OHand boot
-
-  printf("Begin.\n\n");
-
-  HAND_SetDataInterface(HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART); // For non-interrupt receive mode, specify receive function.
-  HAND_SetCommandTimeOut(255);
+  hand_ctx = HAND_CreateContext(serial_port, HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART); // For non-interrupt receive mode, specify receive function.
+  HAND_SetCommandTimeOut(hand_ctx, 255);
   HAND_SetTimerFunction(millis, delay);
+
+  printf("Press any key to stop scan\n");
 
   for (int i = 0; i < 256; i++)
   {
@@ -163,18 +167,23 @@ void setup()
 
     printf("Trying node '0x%02x'...", i);
 
-    err = HAND_GetFirmwareVersion((uint8_t)i, &major_ver, &minor_ver, &revision, errorHandler);
-    // printf("HAND_GetFirmwareVersion() returned 0x%02x\n", err);
+    err = HAND_GetFirmwareVersion(hand_ctx, (uint8_t)i, &major_ver, &minor_ver, &revision, &remote_err);
 
     if (err == HAND_RESP_SUCCESS)
     {
       printf("node '0x%02x' found, firmware version: %d.%d.%d\n", i, major_ver, minor_ver, revision);
       node_ids[node_cnt++] = (uint8_t)i;
     }
-    else
+    else if (err == HAND_RESP_TIMEOUT)
     {
       printf("time out\n");
     }
+    else
+    {
+      printf("HAND_GetFirmwareVersion() returned 0x%02x\n", err);
+    }
+
+    if (kbhit()) break;
   }
 
   printf("\nScan complete, %d nodes found.\n", node_cnt);
@@ -182,23 +191,23 @@ void setup()
 
 void loop()
 {
-  uint8_t err;
+  uint8_t err, remote_err;
 
   int old_id, new_id;
 
   while (true)
   {
-    printf("Nodes on bus:");
+    printf("Nodes on bus:\n");
 
     for (int i = 0; i < node_cnt; i++)
     {
-      printf("\t0x%02x\n", i);
+      printf("\t0x%02x\n", node_ids[i]);
     }
 
-    printf("Please input old_id,new_id to modify ROH node ID:");
+    printf("\nPlease input old_id,new_id to modify ROH node ID:");
     scanf_s("%d,%d", &old_id, &new_id);
 
-    err = HAND_SetID((uint8_t)old_id, (uint8_t)new_id, errorHandler);
+    err = HAND_SetID(hand_ctx, (uint8_t)old_id, (uint8_t)new_id, &remote_err);
 
     printf("Modify node id 0x%02x to 0x%02x, result=0x%02x.\n", old_id, new_id, err);
   }

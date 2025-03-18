@@ -75,11 +75,11 @@ include_directories(
 ## library
 find_library(OHAND_LIBRARY_RELEASE
              NAMES ROHSerialAPIStatic
-             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/Release)
+             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
 
 find_library(OHAND_LIBRARY_DEBUG
              NAMES ROHSerialAPIStatic
-             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/Debug)
+             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
 
 set(ohand_LIBRARIES
     debug ${OHAND_LIBRARY_DEBUG}

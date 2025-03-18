@@ -35,7 +35,7 @@ sudo make install
 ```BASH
 source /usr/local/serial/setup.bash  # for serial lib
 
-cd /path/to/ohand_serial/simple_control
+cd path/to/project
 mkdir build && cd build
 cmake ..
 make
@@ -44,7 +44,8 @@ make
 ### 1.3. Run
 
 ```BASH
-./set_id /dev/ttyx           # Run, replace ttyx with real port name
+cd path/to/project/build/Debug  # Or 'Release'
+./set_id /dev/ttyx              # Run, replace ttyx with real port name
 ```
 
 ## 2. Windows
@@ -81,7 +82,7 @@ d:\serial
 
 ```BATCH
 
-cd path_to_project
+cd path\to\project
 md build
 cd build
 cmake ..
@@ -97,7 +98,7 @@ cmake --build . --config Release
 ### 2.3. Run
 
 ```BATCH
-cd path_to_project/build/Debug
+cd path\to\project\build\Debug
 REM Or 'Release'
 
 REM Run, replace COMx with real port name

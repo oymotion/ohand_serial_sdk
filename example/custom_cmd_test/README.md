@@ -1,7 +1,5 @@
 
-# ROH Serial API Example
-
-Example for ROH simple control.
+# ROH Custom Comand Test
 
 ## 1. Linux
 
@@ -44,8 +42,8 @@ make
 ### 1.3. Run
 
 ```BASH
-cd path/to/project/build/Debug      # Or 'Release'
-./simple_control /dev/ttyx          # Run, replace ttyx with real port name
+cd path/to/project/build/Debug   # Or 'Release'
+./custom_cmd_test /dev/ttyx           # Run, replace ttyx with real port name
 ```
 
 ## 2. Windows
@@ -102,5 +100,5 @@ cd path\to\project\build\Debug
 REM Or 'Release'
 
 REM Run, replace COMx with real port name
-simple_control COMx
+custom_cmd_test COMx
 ```

@@ -34,3 +34,5 @@
 # Custom
 build
 .vscode
+*.zip
+*.rar
