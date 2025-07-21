@@ -34,6 +34,11 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 
+#define MAX_THUMB_ROOT_POS 3
+#define MAX_MOTOR_CNT 6
+#define MAX_FORCE_ENTRIES 12 * 5 /* Max force entries for one finger */
+
+
 typedef enum
 {
   HAND_PROTOCOL_UART,
@@ -41,13 +46,7 @@ typedef enum
 } HAND_PROTOCOL;
 
 
-
 #define PROTOCOL_VERSION_MAJOR 3
-
-
-// #define MAX_THUMB_ROOT_POS 3
-// #define MAX_MOTOR_CNT 6
-// #define MAX_FORCE_ENTRIES (12 * 5) /* Max force entries for one force sensor */
 
 
 /*
@@ -303,17 +302,17 @@ uint8_t HAND_GetFingerCurrent(void *ctx, uint8_t hand_id, uint8_t finger_id, uin
 
 
 /**
-  * @brief  Get force limit of finger
+  * @brief  Get target force of finger
   * @note
   * @param  ctx: pointer to OHand context
   * @param  hand_id: id of OHand
   * @param  finger_id: index of finger
-  * @param  force_limit: address of var to put force limit in mN
+  * @param  force_target: address of var to put force target in mN
   * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
   * @retval -HAND_RESP_SUCCESS: success
   *         -Others: failed, see definition of API return values
   */
-uint8_t HAND_GetFingerForceLimit(void *ctx, uint8_t hand_id, uint8_t finger_id, uint16_t *force_limit, uint8_t *remote_err);
+uint8_t HAND_GetFingerForceTarget(void *ctx, uint8_t hand_id, uint8_t finger_id, uint16_t *force_target, uint8_t *remote_err);
 
 
 /**
@@ -533,6 +532,50 @@ uint8_t HAND_GetBatteryVoltage(void *ctx, uint8_t hand_id, uint16_t *voltage, ui
 uint8_t HAND_GetUsageStat(void *ctx, uint8_t hand_id, uint32_t *total_use_time, uint32_t *total_open_times, uint8_t motor_cnt, uint8_t *remote_err);
 
 
+/**
+  * @brief  Get manufacture data
+  * @note
+  * @param  ctx: pointer to OHand context
+  * @param  hand_id: id of OHand
+  * @param  data: pointer to array to put manufacture data
+  * @param  data_size: address of var to put manufacture data size
+  * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
+  * @retval -HAND_RESP_SUCCESS: success
+  *         -Others: failed, see definition of API return values
+  */
+uint8_t HAND_GetManufactureData(void *ctx, uint8_t hand_id, uint8_t *data, uint8_t *data_size, uint8_t *remote_err);
+
+
+/**
+  * @brief  Get vendor id
+  * @note
+  * @param  ctx: pointer to OHand context
+  * @param  hand_id: id of OHand
+  * @param  vendor_id: address of var to put vendor id
+  * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
+  * @retval -HAND_RESP_SUCCESS: success
+  *         -Others: failed, see definition of API return values
+  */
+uint8_t HAND_GetVendorID(void *ctx, uint8_t hand_id, uint16_t *vendor_id, uint8_t *remote_err);
+
+
+/**
+  * @brief  Get force PID gain
+  * @note
+  * @param  ctx: pointer to OHand context
+  * @param  hand_id: id of OHand
+  * @param  finger_id: index of finger
+  * @param  p: address of var to put PID gain p
+  * @param  i: address of var to put PID gain i
+  * @param  d: address of var to put PID gain d
+  * @param  g: address of var to put PID gain g
+  * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
+  * @retval -HAND_RESP_SUCCESS: success
+  *         -Others: failed, see definition of API return values
+  */
+uint8_t HAND_GetForcePID(void *ctx, uint8_t hand_id, uint8_t finger_id, float *p, float *i, float *d, float *g, uint8_t *remote_err);
+
+
 
 /*
  * Sets
@@ -638,17 +681,17 @@ uint8_t HAND_SetFingerCurrentLimit(void *ctx, uint8_t hand_id, uint8_t finger_id
 
 
 /**
-  * @brief  Set finger normal force limit
+  * @brief  Set finger normal force target
   * @note
   * @param  ctx: pointer to OHand context
   * @param  hand_id: id of OHand
   * @param  finger_id: index of finger
-  * @param  force_limit: force limit in mN for finger
+  * @param  force_target: force target in mN for finger
   * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
   * @retval -HAND_RESP_SUCCESS: success
   *         -Others: failed, see definition of API return values
   */
-uint8_t HAND_SetFingerForceLimit(void *ctx, uint8_t hand_id, uint8_t finger_id, uint16_t force_limit, uint8_t *remote_err);
+uint8_t HAND_SetFingerForceTarget(void *ctx, uint8_t hand_id, uint8_t finger_id, uint16_t force_target, uint8_t *remote_err);
 
 
 /**
@@ -873,6 +916,48 @@ uint8_t HAND_SetButtonPressedCnt(void *ctx, uint8_t hand_id, uint8_t pressed_cnt
   */
 uint8_t HAND_StartInit(void *ctx, uint8_t hand_id, uint8_t *remote_err);
 
+
+ /**
+  * @brief  Set manufacture data
+  * @note
+  * @param  ctx: pointer to OHand context
+  * @param  hand_id: id of OHand
+  * @param  data: address of data
+  * @param  data_size: data size
+  * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
+  * @retval -HAND_RESP_SUCCESS: success
+  *         -Others: failed, see definition of API return values
+  */
+uint8_t HAND_SetManufactureData(void *ctx, uint8_t hand_id, uint8_t *data, uint8_t data_size, uint8_t *remote_err);
+
+
+/**
+  * @brief  Set force PID for specific finger
+  * @note
+  * @param  ctx: pointer to OHand context
+  * @param  hand_id: id of OHand
+  * @param  finger_id: index of finger
+  * @param  p: PID gain p
+  * @param  i: PID gain i
+  * @param  d: PID gain d
+  * @param  d: PID gain g
+  * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
+  * @retval -HAND_RESP_SUCCESS: success
+  *         -Others: failed, see definition of API return values
+  */
+uint8_t HAND_SetFingerForcePID(void *ctx, uint8_t hand_id, uint8_t finger_id, float p, float i, float d, float g, uint8_t *remote_err);
+
+
+/**
+  * @brief  Reset force, that is, calibrate
+  * @note
+  * @param  ctx: pointer to OHand context
+  * @param  hand_id: id of OHand
+  * @param  remote_err: address to put remote node error in case of  HAND_RESP_HAND_ERROR
+  * @retval -HAND_RESP_SUCCESS: success
+  *         -Others: failed, see definition of API return values
+  */
+uint8_t HAND_ResetForce(void *ctx, uint8_t hand_id, uint8_t *remote_err);
 
 #ifdef __cplusplus
 }

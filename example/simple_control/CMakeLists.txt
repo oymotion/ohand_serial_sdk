@@ -13,14 +13,22 @@ string(REPLACE "AMD64" "x86_64" CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_
 
 
 if(UNIX)
-    # find_package(PkgConfig REQUIRED)
+    find_package(PkgConfig REQUIRED)
     find_package(PkgConfig REQUIRED)
 
     find_package(serial REQUIRED)
 
-    # if (NOT serial_FOUND)
-    #     message(FATAL_ERROR "serial Not Found!")
-    # endif (NOT serial_FOUND)
+    find_library(pcanbasic_LIBRARIES
+        NAMES pcanbasic
+        HINTS /usr/lib /usr/local/lib
+        REQUIRED
+    )
+
+    find_path(pcanbasic_INCLUDE_DIRS
+        NAMES PCANBasic.h
+        HINTS /usr/include /usr/local/include
+        REQUIRED
+    )
 elseif(WIN32)
     find_path(serial_INCLUDE_DIRS
         NAMES serial/serial.h
@@ -38,12 +46,34 @@ elseif(WIN32)
         debug ${serial_LIB_DIRS}/Debug/serial.lib
         optimized ${serial_LIB_DIRS}/Release/serial.lib
     )
+
+    find_path(pcanbasic_INCLUDE_DIRS
+        NAMES PCANBasic.h
+        HINTS /PCAN-Basic/Include
+        REQUIRED
+    )
+
+    find_path(pcanbasic_LIB_DIRS
+        NAMES PCANBasic.lib
+        HINTS /PCAN-Basic/x64/VC_LIB
+        REQUIRED
+    )
+
+    set(pcanbasic_LIBRARIES 
+        ${pcanbasic_LIB_DIRS}/PCANBasic.lib
+    )
+
 else()
     message(ERROR "UNKNOWN COMPILER")
 endif()
 
 message ("serial_INCLUDE_DIRS: " ${serial_INCLUDE_DIRS})
+message ("serial_LIB_DIRS: " ${serial_LIB_DIRS})
 message ("serial_LIBRARIES: " ${serial_LIBRARIES})
+
+message ("pcanbasic_INCLUDE_DIRS: " ${pcanbasic_INCLUDE_DIRS})
+message ("pcanbasic_LIB_DIRS: " ${pcanbasic_LIB_DIRS})
+message ("pcanbasic_LIBRARIES: " ${pcanbasic_LIBRARIES})
 
 
 #
@@ -63,6 +93,7 @@ message ("serial_LIBRARIES: " ${serial_LIBRARIES})
 ## include directories
 include_directories(
     ${serial_INCLUDE_DIRS}
+    ${pcanbasic_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
@@ -100,6 +131,7 @@ add_executable(${PROJECT_NAME} ${SRCS})
 target_link_libraries(${EXECUTABLE_NAME}
     # pthread
     ${serial_LIBRARIES}
+    ${pcanbasic_LIBRARIES}
     ${ohand_LIBRARIES}
 )
 

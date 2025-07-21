@@ -10,6 +10,7 @@ Ubuntu 22 + gcc version 11
 ### 1.1. Install serial lib
 
 ```BASH
+sudo apt install catkin
 cd ~
 git clone https://github.com/wjwwood/serial
 cd serial
@@ -26,11 +27,36 @@ CMAKE_FLAGS := -DCMAKE_INSTALL_PREFIX=/usr/local/serial
 Then compile:
 
 ```BASH
-make
-sudo make install
+sudo make && sudo make install
 ```
 
-### 1.2. Compile
+### 1.2. Install PCAN-Linux-Driver
+
+Download from https://www.peak-system.com/fileadmin/media/linux/index.php
+
+```bash
+tar -xzf peak-linux-driver-8.20.0.tar.gz
+cd peak-linux-driver-8.20.0
+sudo make && sudo make install
+```
+
+### 1.3. Install PCAN-Basic lib
+
+Download from https://www.peak-system.com/PCAN-Basic-Linux.433.0.html?&L=1
+
+```BASH
+tar -xzf PCAN-Basic_Linux-4.10.0.4.tar.gz
+cd PCAN-Basic_Linux-4.10.0.4/libpcanbasic/pcanbasic
+make clean
+sudo make && sudo make install
+```
+
+### 1.4. Compile
+
+Modify PORT_TYPE according to protocol type in main.cpp:
+
+- RS485: `PORT_TYPE = PORT_TYPE_UART`
+- CAN: `PORT_TYPE = PORT_TYPE_CAN`
 
 ```BASH
 source /usr/local/serial/setup.bash  # for serial lib
@@ -38,14 +64,21 @@ source /usr/local/serial/setup.bash  # for serial lib
 cd path/to/project
 mkdir build && cd build
 cmake ..
-make
+sudo make
 ```
 
-### 1.3. Run
+### 1.5. Run
 
 ```BASH
-cd path/to/project/build/Debug      # Or 'Release'
-./simple_control /dev/ttyx          # Run, replace ttyx with real port name
+cd path/to/project/build
+
+REM Run serial, replace ttyx with real port name
+sudo chomod +x /dev/ttyx  # replace ttyx with real port name
+./simple_control /dev/ttyx
+
+REM Run can, replace x with number from 1 - 16
+sudo chomod +x /dev/pcan-usb
+./simple_control x
 ```
 
 ## 2. Windows
@@ -78,7 +111,20 @@ d:\serial
             serial.pdb
 ```
 
-### 2.2. Compile
+### 2.2 Install PCAN-Basic lib
+
+Download from https://www.peak-system.com/PCAN-Basic.126.0.html?&L=1 
+
+Put files to the same partition as your ohand_serial_sdk, e.g., d:\
+
+Make dirs/files look as d:\PCAN-Basic
+
+### 2.3. Compile
+
+Modify PORT_TYPE according to protocol type in main.cpp:
+
+- RS485: `PORT_TYPE = PORT_TYPE_UART`
+- CAN: `PORT_TYPE = PORT_TYPE_CAN`
 
 ```BATCH
 
@@ -101,6 +147,9 @@ cmake --build . --config Release
 cd path\to\project\build\Debug
 REM Or 'Release'
 
-REM Run, replace COMx with real port name
+REM Run serial, replace COMx with real port name
 simple_control COMx
+
+REM Run can, replace x with number from 1 - 16
+simple_control x
 ```
