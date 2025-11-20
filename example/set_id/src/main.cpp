@@ -1,6 +1,5 @@
 
 #include <stdint.h>
-#include <conio.h>
 #include <chrono>
 #include <thread>
 
@@ -11,6 +10,7 @@
 using namespace std;
 
 #ifdef _MSC_VER
+#include <conio.h>
 #define kbhit _kbhit
 #define getch _getch
 #endif
@@ -44,6 +44,50 @@ static const float _pidGains[][4] = {
     {100.00, 2.00, 250.00, 1.00}
 #endif
 };
+#endif
+
+#ifndef _MSC_VER
+// Ubuntu 下替换 kbhit() 函数
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+int kbhit() {
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if(ch != EOF) {
+        ungetc(ch, stdin);
+        return 1;
+    }
+
+    return 0;
+}
+
+// Ubuntu 下替换 getch() 函数（不回显输入）
+int getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
+}
 #endif
 
 //----------------global variable-----------------//
@@ -205,7 +249,7 @@ void loop()
     }
 
     printf("\nPlease input old_id,new_id to modify ROH node ID:");
-    scanf_s("%d,%d", &old_id, &new_id);
+    scanf("%d,%d", &old_id, &new_id);
 
     err = HAND_SetID(hand_ctx, (uint8_t)old_id, (uint8_t)new_id, &remote_err);
 

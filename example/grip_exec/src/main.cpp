@@ -1,6 +1,5 @@
 
 #include <stdint.h>
-#include <conio.h>
 #include <chrono>
 #include <thread>
 #include <map>
@@ -14,8 +13,53 @@ using namespace std;
 
 
 #ifdef _MSC_VER
+#include <conio.h>
 #define kbhit _kbhit
 #define getch _getch
+#endif
+
+#ifndef _MSC_VER
+// Ubuntu 下替换 kbhit() 函数
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+int kbhit() {
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if(ch != EOF) {
+        ungetc(ch, stdin);
+        return 1;
+    }
+
+    return 0;
+}
+
+// Ubuntu 下替换 getch() 函数（不回显输入）
+int getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
+}
 #endif
 
 
@@ -317,10 +361,10 @@ void setup()
 
   printf("Begin.\n");
 
-  hand_ctx = HAND_CreateContext(serial_port, HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART); // For non-interrupt receive mode, specify receive function.
+  hand_ctx = HAND_CreateContext(serial_port, HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART);
   HAND_SetCommandTimeOut(hand_ctx, 255);
   HAND_SetTimerFunction(millis, delay);
-
+  
   do
   {
     uint8_t major_ver, minor_ver;

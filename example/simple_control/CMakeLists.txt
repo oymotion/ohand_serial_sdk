@@ -10,25 +10,29 @@ set(EXECUTABLE_NAME ${PROJECT_NAME})
 
 # 统一CMAKE_HOST_SYSTEM_PROCESSOR
 string(REPLACE "AMD64" "x86_64" CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR})
-
+string(REPLACE "aarch64" "arm64" CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR})
 
 if(UNIX)
-    find_package(PkgConfig REQUIRED)
+    # find_package(PkgConfig REQUIRED)
     find_package(PkgConfig REQUIRED)
 
     find_package(serial REQUIRED)
 
-    find_library(pcanbasic_LIBRARIES
-        NAMES pcanbasic
-        HINTS /usr/lib /usr/local/lib
-        REQUIRED
-    )
-
+    # if (NOT serial_FOUND)
+    #     message(FATAL_ERROR "serial Not Found!")
+    # endif (NOT serial_FOUND)
+    
     find_path(pcanbasic_INCLUDE_DIRS
-        NAMES PCANBasic.h
-        HINTS /usr/include /usr/local/include
-        REQUIRED
+    	NAMES PCANBasic.h
+    	HINTS /PCAN-Basic_Linux-4.10.0.4/libpcanbasic/pcanbasic/include
+    	REQUIRED
     )
+    find_library(pcanbasic_LIBRARIES
+    	NAMES libpcanbasic.so
+    	HINTS /PCAN-Basic_Linux-4.10.0.4/libpcanbasic/pcanbasic/lib
+    	REQUIRED
+    )
+    
 elseif(WIN32)
     find_path(serial_INCLUDE_DIRS
         NAMES serial/serial.h
@@ -104,13 +108,27 @@ include_directories(
 
 
 ## library
-find_library(OHAND_LIBRARY_RELEASE
-             NAMES ROHSerialAPIStatic
-             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
+if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
+    # 对于arm64架构，先尝试arm64目录，再回退到原路径
+    find_library(OHAND_LIBRARY_RELEASE
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/arm64/${CMAKE_HOST_SYSTEM_NAME}/release
+                       ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
 
-find_library(OHAND_LIBRARY_DEBUG
-             NAMES ROHSerialAPIStatic
-             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
+    find_library(OHAND_LIBRARY_DEBUG
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/arm64/${CMAKE_HOST_SYSTEM_NAME}/debug
+                       ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
+else()
+    # 原有x86_64架构的搜索逻辑
+    find_library(OHAND_LIBRARY_RELEASE
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
+
+    find_library(OHAND_LIBRARY_DEBUG
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
+endif()
 
 set(ohand_LIBRARIES
     debug ${OHAND_LIBRARY_DEBUG}

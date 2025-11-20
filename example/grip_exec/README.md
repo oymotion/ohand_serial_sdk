@@ -5,7 +5,7 @@ Example for ROH simple control.
 
 ## 1. Linux
 
-Ubuntu 22 + gcc version 11
+Ubuntu 20 + gcc version 11
 
 ### 1.1. Install serial lib
 

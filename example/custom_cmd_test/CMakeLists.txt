@@ -10,7 +10,7 @@ set(EXECUTABLE_NAME ${PROJECT_NAME})
 
 # 统一CMAKE_HOST_SYSTEM_PROCESSOR
 string(REPLACE "AMD64" "x86_64" CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR})
-
+string(REPLACE "aarch64" "arm64" CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR})
 
 if(UNIX)
     # find_package(PkgConfig REQUIRED)
@@ -108,13 +108,27 @@ include_directories(
 
 
 ## library
-find_library(OHAND_LIBRARY_RELEASE
-             NAMES ROHSerialAPIStatic
-             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
+if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
+    # 对于arm64架构，先尝试arm64目录，再回退到原路径
+    find_library(OHAND_LIBRARY_RELEASE
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/arm64/${CMAKE_HOST_SYSTEM_NAME}/release
+                       ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
 
-find_library(OHAND_LIBRARY_DEBUG
-             NAMES ROHSerialAPIStatic
-             HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
+    find_library(OHAND_LIBRARY_DEBUG
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/arm64/${CMAKE_HOST_SYSTEM_NAME}/debug
+                       ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
+else()
+    # 原有x86_64架构的搜索逻辑
+    find_library(OHAND_LIBRARY_RELEASE
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/release)
+
+    find_library(OHAND_LIBRARY_DEBUG
+                 NAMES ROHSerialAPIStatic
+                 HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/${CMAKE_HOST_SYSTEM_PROCESSOR}/${CMAKE_HOST_SYSTEM_NAME}/debug)
+endif()
 
 set(ohand_LIBRARIES
     debug ${OHAND_LIBRARY_DEBUG}
@@ -127,50 +141,9 @@ message ("ohand_LIBRARIES: " ${ohand_LIBRARIES})
 ## files
 file(GLOB SRCS src/*.c src/*.cpp src/*.cc)  # a variable called SRCS with all files whose path match "*.c *.cpp..."
 
-# get git version
-find_package(Git QUIET)
-if(Git_FOUND)
-    # get current commit hash
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-        WORKING_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    # get current branch
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    # get current describe info
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} describe --tags --long --always
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_DESCRIBE
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    # combine version
-    if(GIT_DESCRIBE)
-        string(REGEX REPLACE "^([0-9]+\\.[0-9]+)-([0-9]+)-g.*" "\\1" GIT_TAG ${GIT_DESCRIBE})
-        string(REGEX REPLACE "^([0-9]+\\.[0-9]+)-([0-9]+)-g.*" "\\2" GIT_COMMITS_SINCE_TAG ${GIT_DESCRIBE})
-
-        set(VERSION_STRING "${GIT_TAG}.${GIT_COMMITS_SINCE_TAG}-${GIT_COMMIT_HASH_SHORT}")
-    else()
-      set(VERSION_STRING "${GIT_BRANCH}-${GIT_COMMIT_HASH_SHORT}")
-    endif()
-else()
-    set(VERSION_STRING "unknow")
-endif()
-
 ## binary files
 add_executable(${PROJECT_NAME} ${SRCS})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE VERSION_STRING="${VERSION_STRING}")
 
 ## link binaries
 target_link_libraries(${EXECUTABLE_NAME}

@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
   port = PORT_Init(port_name, BAUD_RATE);
 
-
+  
   setup();
 
   while (true)
@@ -140,7 +140,7 @@ void setup()
   hand_ctx = HAND_CreateContext(port, HAND_PROTOCOL_UART, ADDRESS_MASTER, PORT_SendData, PORT_RecvData); // For non-interrupt receive mode, specify receive function.
   HAND_SetCommandTimeOut(hand_ctx, 255);
   HAND_SetTimerFunction(millis, delay);
-
+  
   do
   {
     uint8_t major_ver, minor_ver;

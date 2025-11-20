@@ -272,6 +272,19 @@ uint8_t HAND_GetCaliData(void *ctx, uint8_t hand_id, uint16_t *end_pos, uint16_t
   */
 uint8_t HAND_GetFingerPID(void *ctx, uint8_t hand_id, uint8_t finger_id, float *p, float *i, float *d, float *g, uint8_t *remote_err);
 
+/**
+ * @brief  Get Stop Parameter
+ * @note
+ * @param  hand_id: id of OHand
+ * @param  finger_id: index of finger
+ * @param  speed: address of var to put Stop Parameter speed
+ * @param  current: address of var to put Stop Parameter current
+ * @param  after_period: address of var to put Stop Parameter after_period
+ * @param  retry_period: address of var to put Stop Parameter retry_period
+ * @retval -RESP_SUCCESS: success
+ *         -Others: failed, see definition of API return values
+ */
+uint8_t HAND_GetFingerStopParam(void *ctx, uint8_t hand_id, uint8_t finger_id, uint16_t *speed, uint16_t *current, uint16_t *after_period, uint16_t *retry_period, uint8_t *remote_err);
 
 /**
   * @brief  Get current limit of finger
@@ -575,6 +588,17 @@ uint8_t HAND_GetVendorID(void *ctx, uint8_t hand_id, uint16_t *vendor_id, uint8_
   */
 uint8_t HAND_GetForcePID(void *ctx, uint8_t hand_id, uint8_t finger_id, float *p, float *i, float *d, float *g, uint8_t *remote_err);
 
+/**
+     * @brief  Get Speed Control Parameters of finger
+     * @note
+     * @param  hand_id: id of OHand
+     * @param  brake_distance: Speed Brake Distance
+     * @param  accel_distance: Speed Accelerate Distance
+     * @param  speed_ratio: PID Speed Ratio
+     * @retval -RESP_SUCCESS: success
+     *         -Others: failed, see definition of API return values
+     */
+uint8_t HAND_GetFingerSpeedCtrlParams(void *ctx, uint8_t hand_id, uint16_t *brake_distance, uint16_t *accel_distance, float *speed_ratio, uint8_t* remote_err);
 
 
 /*
@@ -946,6 +970,33 @@ uint8_t HAND_SetManufactureData(void *ctx, uint8_t hand_id, uint8_t *data, uint8
   *         -Others: failed, see definition of API return values
   */
 uint8_t HAND_SetFingerForcePID(void *ctx, uint8_t hand_id, uint8_t finger_id, float p, float i, float d, float g, uint8_t *remote_err);
+
+/**
+     * @brief  Set Stop Parameter
+     * @note
+     * @param  hand_id: id of OHand
+     * @param  finger_id: index of finger
+     * @param  speed: address of var to put Stop Parameter speed
+     * @param  current: address of var to put Stop Parameter current
+     * @param  after_period: address of var to put Stop Parameter after_period
+     * @param  retry_period: address of var to put Stop Parameter retry_period
+     * @retval -RESP_SUCCESS: success
+     *         -Others: failed, see definition of API return values
+     */
+uint8_t HAND_SetFingerStopParam(void *ctx, uint8_t hand_id, uint8_t finger_id, uint16_t speed, uint16_t current, uint16_t after_period, uint16_t retry_period, uint8_t *remote_err);
+
+
+/**
+     * @brief  Set Speed Control Parameters of finger
+     * @note
+     * @param  hand_id: id of OHand
+     * @param  brake_distance: Speed Brake Distance
+     * @param  accel_distance: Speed Accelerate Distance
+     * @param  speed_ratio: PID Speed Ratio
+     * @retval -RESP_SUCCESS: success
+     *         -Others: failed, see definition of API return values
+     */
+uint8_t HAND_SetFingerSpeedCtrlParams(void *ctx, uint8_t hand_id, uint16_t brake_distance, uint16_t accel_distance, float speed_ratio, uint8_t* remote_err);
 
 
 /**
