@@ -3,47 +3,37 @@
 #include <chrono>
 #include <thread>
 
-#include "serial/serial.h"
-
 #include "OHandSerialAPI.h"
 
 using namespace std;
+
+#define PORT_TYPE_UART 1
+#define PORT_TYPE_CAN 2
+
+#define PORT_TYPE PORT_TYPE_CAN
+
+#if (PORT_TYPE == PORT_TYPE_UART)
+#include "uart.h"
+#define PORT_Init UART_Init
+#define PORT_DeInit UART_DeInit
+#define PORT_SendData UART_SendData
+#define PORT_RecvData UART_RecvData
+#define BAUD_RATE 115200
+#elif  (PORT_TYPE == PORT_TYPE_CAN)
+#include "can.h"
+#define PORT_Init CAN_Init
+#define PORT_DeInit CAN_DeInit
+#define PORT_SendData CAN_SendData
+#define PORT_RecvData CAN_RecvData
+#define BAUD_RATE 1000000
+#else
+#error Invalid PORT_RTPE
+#endif
 
 #ifdef _MSC_VER
 #include <conio.h>
 #define kbhit _kbhit
 #define getch _getch
-#endif
-
-
-//----------------OHand-----------------//
-#define ADDRESS_MASTER 0x01
-#define ADDRESS_HAND 0x02
-
-// #define SET_PID   // Uncomment this if you want to set PID
-
-#define HAS_THUMB_ROOT_MOTOR
-
-#define NUM_FINGERS (5)
-
-#ifdef HAS_THUMB_ROOT_MOTOR
-#define NUM_MOTORS (6)
-#define THUMB_ROOT_ID (5)
-#else
-#define NUM_MOTORS (NUM_FINGERS)
-#endif
-
-#ifdef SET_PID
-static const float _pidGains[][4] = {
-    {100.00, 2.00, 250.00, 1.00},
-    {100.00, 2.00, 250.00, 1.00},
-    {100.00, 2.00, 250.00, 1.00},
-    {100.00, 2.00, 250.00, 1.00},
-    {100.00, 2.00, 250.00, 1.00},
-#ifdef HAS_THUMB_ROOT_MOTOR
-    {100.00, 2.00, 250.00, 1.00}
-#endif
-};
 #endif
 
 #ifndef _MSC_VER
@@ -90,13 +80,45 @@ int getch() {
 }
 #endif
 
+
+//----------------OHand-----------------//
+#define ADDRESS_MASTER 0x01
+#define ADDRESS_HAND 0x02
+
+// #define SET_PID   // Uncomment this if you want to set PID
+
+#define HAS_THUMB_ROOT_MOTOR
+
+#define NUM_FINGERS (5)
+
+#ifdef HAS_THUMB_ROOT_MOTOR
+#define NUM_MOTORS (6)
+#define THUMB_ROOT_ID (5)
+#else
+#define NUM_MOTORS (NUM_FINGERS)
+#endif
+
+#ifdef SET_PID
+static const float _pidGains[][4] = {
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+    {100.00, 2.00, 250.00, 1.00},
+#ifdef HAS_THUMB_ROOT_MOTOR
+    {100.00, 2.00, 250.00, 1.00}
+#endif
+};
+#endif
+
 //----------------global variable-----------------//
-serial::Serial *serial_port = NULL;
+void* port = NULL;
+
+void* hand_ctx = NULL;
 
 uint8_t node_ids[256] = {0};
 uint16_t node_cnt = 0;
 
-void* hand_ctx = NULL;
 
 //----------------system functions-----------------//
 uint32_t millis();
@@ -116,21 +138,11 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-  const char *serial_port_name = argv[1];
+  const char *port_name = argv[1];
 
-  printf("serial port name: '%s'\n", serial_port_name);
+  printf("Use port: '%s'\n", port_name);
 
-  serial_port = new serial::Serial(serial_port_name, 115200, serial::Timeout::simpleTimeout(300));
-
-  printf("serial port '%s' open? %s.\n", serial_port_name, (serial_port->isOpen() ? "Yes" : "No"));
-
-  if (!serial_port->isOpen())
-  {
-    printf("error: serial could not be opened \n");
-    delete serial_port;
-
-    exit(-1);
-  }
+  port = PORT_Init(port_name, BAUD_RATE);
 
   setup();
 
@@ -139,8 +151,7 @@ int main(int argc, char *argv[])
     loop();
   }
 
-  serial_port->close();
-  delete serial_port;
+  PORT_DeInit();
 
   printf("program exit success \n");
   exit(0);
@@ -163,42 +174,12 @@ void delay(uint32_t millisecondsToWait)
   this_thread::sleep_for(chrono::milliseconds(millisecondsToWait));
 }
 
-void recvDataUART(void *hand_ctx)
-{
-  uint8_t data = 0;
-
-  auto port = *(serial::Serial**)hand_ctx;
-
-  while (port->available() != 0)
-  {
-    port->read(&data, 1);
-    // printf("receive : data = 0x%x \n" , data);
-    HAND_OnData(hand_ctx, data);
-  }
-}
-
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t size, void* hand_ctx)
-{
-  // printf("sendDataUART: byte size = %d \n" , len);
-  vector<uint8_t> dataVector;
-
-  for (int i = 0; i < size; i++)
-  {
-    // printf("data[%d] 0x%x \n" , i, data[i]);
-    dataVector.push_back(data[i]);
-  }
-
-  auto port = *(serial::Serial**)hand_ctx;
-
-  port->write(dataVector);
-}
-
 
 void setup()
 {
   uint8_t err, remote_err;
 
-  hand_ctx = HAND_CreateContext(serial_port, HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART); // For non-interrupt receive mode, specify receive function.
+  hand_ctx = HAND_CreateContext(port, HAND_PROTOCOL_UART, ADDRESS_MASTER, PORT_SendData, PORT_RecvData); // For non-interrupt receive mode, specify receive function.
   HAND_SetCommandTimeOut(hand_ctx, 255);
   HAND_SetTimerFunction(millis, delay);
 

@@ -4,13 +4,33 @@
 #include <thread>
 #include <map>
 
-#include "serial/serial.h"
-
 #include "log.h"
 #include "OHandGripExec.h"
 
 using namespace std;
 
+#define PORT_TYPE_UART 1
+#define PORT_TYPE_CAN 2
+
+#define PORT_TYPE PORT_TYPE_CAN
+
+#if (PORT_TYPE == PORT_TYPE_UART)
+#include "uart.h"
+#define PORT_Init UART_Init
+#define PORT_DeInit UART_DeInit
+#define PORT_SendData UART_SendData
+#define PORT_RecvData UART_RecvData
+#define BAUD_RATE 115200
+#elif  (PORT_TYPE == PORT_TYPE_CAN)
+#include "can.h"
+#define PORT_Init CAN_Init
+#define PORT_DeInit CAN_DeInit
+#define PORT_SendData CAN_SendData
+#define PORT_RecvData CAN_RecvData
+#define BAUD_RATE 1000000
+#else
+#error Invalid PORT_RTPE
+#endif
 
 #ifdef _MSC_VER
 #include <conio.h>
@@ -94,7 +114,9 @@ static const float _pidGains[][4] = {
 #endif
 
 //----------------global variables-----------------//
-serial::Serial* serial_port = NULL;
+void* port = NULL;
+
+void* hand_ctx = NULL;
 
 const uint8_t all_grips[] = {
     GRIP_FIST,
@@ -161,7 +183,6 @@ map<int, const char*> grip_names =
 };
 
 
-void* hand_ctx = NULL;
 
 //---------------- Functions for OHand API -----------------//
 extern "C"
@@ -186,31 +207,13 @@ int main(int argc, char* argv[])
     exit(-1);
   }
 
-  const char* serial_port_name = argv[1];
-
   log_set_level(LOG_LVL_DEBUG);
 
-  printf("Use serial port: '%s'\n", serial_port_name);
+  const char* port_name = argv[1];
 
-  try
-  {
-    serial_port = new serial::Serial(serial_port_name, 115200, serial::Timeout::simpleTimeout(300));
-  }
-  catch (serial::IOException e)
-  {
-    printf("Error: %s\n", e.what());
-    exit(-1);
-  }
+  printf("Use port: '%s'\n", port_name);
 
-  printf("serial port '%s' open? %s.\n", serial_port_name, (serial_port->isOpen() ? "Yes" : "No"));
-
-  if (!serial_port->isOpen())
-  {
-    printf("error: serial could not be opened \n");
-    delete serial_port;
-
-    exit(-1);
-  }
+  port = PORT_Init(port_name, BAUD_RATE);
 
   setup();
 
@@ -288,8 +291,7 @@ int main(int argc, char* argv[])
     }
   }
 
-  serial_port->close();
-  delete serial_port;
+  PORT_DeInit();
 
   printf("program exited with success.\n");
   exit(0);
@@ -312,36 +314,6 @@ void delay(uint32_t millisecondsToWait)
   this_thread::sleep_for(chrono::milliseconds(millisecondsToWait));
 }
 
-void recvDataUART(void* hand_ctx)
-{
-  uint8_t data = 0;
-
-  auto port = *(serial::Serial**)hand_ctx;
-
-  while (port->available() != 0)
-  {
-    port->read(&data, 1);
-    // printf("receive : data = 0x%x \n" , data);
-    HAND_OnData(hand_ctx, data);
-  }
-}
-
-void sendDataUART(uint8_t addr, uint8_t* data, uint8_t size, void* hand_ctx)
-{
-  // printf("sendDataUART: byte size = %d \n" , len);
-  vector<uint8_t> dataVector;
-
-  auto port = *(serial::Serial**)hand_ctx;
-
-  for (int i = 0; i < size; i++)
-  {
-    // printf("data[%d] 0x%x \n" , i, data[i]);
-    dataVector.push_back(data[i]);
-  }
-
-  port->write(dataVector);
-}
-
 
 void wait_key()
 {
@@ -361,7 +333,7 @@ void setup()
 
   printf("Begin.\n");
 
-  hand_ctx = HAND_CreateContext(serial_port, HAND_PROTOCOL_UART, ADDRESS_MASTER, sendDataUART, recvDataUART);
+  hand_ctx = HAND_CreateContext(port, HAND_PROTOCOL_UART, ADDRESS_MASTER, PORT_SendData, PORT_RecvData); // For non-interrupt receive mode, specify receive function.
   HAND_SetCommandTimeOut(hand_ctx, 255);
   HAND_SetTimerFunction(millis, delay);
   

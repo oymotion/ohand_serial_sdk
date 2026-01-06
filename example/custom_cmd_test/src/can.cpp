@@ -90,6 +90,7 @@ void CAN_SendData(uint8_t addr, uint8_t* data, uint8_t len, void* hand_ctx)
   TPCANHandle* can_handle = *(TPCANHandle**)hand_ctx;
 
   canMessage.ID = addr;
+  canMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
 
   for (uint8_t i = 0; i < len; i += 8)
   {
