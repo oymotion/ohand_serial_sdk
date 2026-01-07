@@ -123,8 +123,6 @@ uint16_t node_cnt = 0;
 //----------------system functions-----------------//
 uint32_t millis();
 void delay(uint32_t millisecondsToWait);
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t len, void *hand_ctx);
-void recvDataUART(void *hand_ctx);
 
 void setup();
 void loop();

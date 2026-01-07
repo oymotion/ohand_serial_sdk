@@ -3,8 +3,6 @@
 #include <chrono>
 #include <thread>
 
-#include "serial/serial.h"
-
 #include "OHandSerialAPI.h"
 
 using namespace std;
@@ -73,8 +71,6 @@ void* hand_ctx = NULL;
 //----------------system functions-----------------//
 uint32_t millis();
 void delay(uint32_t millisecondsToWait);
-void sendDataUART(uint8_t addr, uint8_t *data, uint8_t len, void *hand_ctx);
-void recvDataUART(void *hand_ctx);
 
 void setup();
 void loop();

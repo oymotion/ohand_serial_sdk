@@ -189,8 +189,6 @@ extern "C"
 {
   uint32_t millis();
   void delay(uint32_t millisecondsToWait);
-  void sendDataUART(uint8_t addr, uint8_t* data, uint8_t len, void *hand_ctx);
-  void recvDataUART(void *hand_ctx);
 }
 
 
