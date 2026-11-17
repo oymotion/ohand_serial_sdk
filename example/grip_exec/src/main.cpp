@@ -11,8 +11,9 @@ using namespace std;
 
 #define PORT_TYPE_UART 1
 #define PORT_TYPE_CAN 2
+#define PORT_TYPE_CANFD 3
 
-#define PORT_TYPE PORT_TYPE_CAN
+#define PORT_TYPE PORT_TYPE_CANFD
 
 #if (PORT_TYPE == PORT_TYPE_UART)
 #include "uart.h"
@@ -27,6 +28,13 @@ using namespace std;
 #define PORT_DeInit CAN_DeInit
 #define PORT_SendData CAN_SendData
 #define PORT_RecvData CAN_RecvData
+#define BAUD_RATE 1000000
+#elif (PORT_TYPE == PORT_TYPE_CANFD)
+#include "canfd.h"
+#define PORT_Init CANFD_Init
+#define PORT_DeInit CANFD_DeInit
+#define PORT_SendData CANFD_SendData
+#define PORT_RecvData CANFD_RecvData
 #define BAUD_RATE 1000000
 #else
 #error Invalid PORT_RTPE
@@ -87,7 +95,7 @@ int getch() {
 #define ADDRESS_MASTER 0x01
 #define ADDRESS_HAND 0x02
 
-#define SET_PID   // Uncomment this if you want to set PID
+// #define SET_PID   // Uncomment this if you want to set PID
 
 #define HAS_THUMB_ROOT_MOTOR
 
@@ -212,6 +220,13 @@ int main(int argc, char* argv[])
   printf("Use port: '%s'\n", port_name);
 
   port = PORT_Init(port_name, BAUD_RATE);
+  
+    
+  if (port == NULL)
+  {
+    printf("Error: failed to open port '%s'.\n", port_name);
+    exit(-1);
+  }
 
   setup();
 

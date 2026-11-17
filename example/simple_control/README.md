@@ -57,6 +57,7 @@ Modify PORT_TYPE according to protocol type in main.cpp:
 
 - RS485: `PORT_TYPE = PORT_TYPE_UART`
 - CAN: `PORT_TYPE = PORT_TYPE_CAN`
+- CANFD: `PORT_TYPE = PORT_TYPE_CANFD`
 
 ```BASH
 source /usr/local/serial/setup.bash  # for serial lib
@@ -125,6 +126,7 @@ Modify PORT_TYPE according to protocol type in main.cpp:
 
 - RS485: `PORT_TYPE = PORT_TYPE_UART`
 - CAN: `PORT_TYPE = PORT_TYPE_CAN`
+- CANFD: `PORT_TYPE = PORT_TYPE_CANFD`
 
 ```BATCH
 
@@ -151,5 +153,8 @@ REM Run serial, replace COMx with real port name
 simple_control COMx
 
 REM Run can, replace x with number from 1 - 16
+simple_control x
+
+REM Run canfd, replace x with number start from 0
 simple_control x
 ```

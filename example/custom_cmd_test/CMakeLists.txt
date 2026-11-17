@@ -67,6 +67,24 @@ elseif(WIN32)
         ${pcanbasic_LIB_DIRS}/PCANBasic.lib
     )
 
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(canfd_ARCH x64)
+    else()
+        set(canfd_ARCH x86)
+    endif()
+
+    set(canfd_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/canfd/${canfd_ARCH})
+
+    if(EXISTS ${canfd_DIR}/ControlCANFD.h AND EXISTS ${canfd_DIR}/ControlCANFD.lib)
+        set(canfd_INCLUDE_DIRS ${canfd_DIR})
+        set(canfd_LIBRARIES ${canfd_DIR}/ControlCANFD.lib)
+        set(canfd_DLL ${canfd_DIR}/ControlCANFD.dll)
+    else()
+        message(WARNING "third_party/canfd/${canfd_ARCH} is missing ControlCANFD.h or ControlCANFD.lib, CANFD port type is unavailable.")
+        set(canfd_INCLUDE_DIRS )
+        set(canfd_LIBRARIES )
+    endif()
+
 else()
     message(ERROR "UNKNOWN COMPILER")
 endif()
@@ -78,6 +96,10 @@ message ("serial_LIBRARIES: " ${serial_LIBRARIES})
 message ("pcanbasic_INCLUDE_DIRS: " ${pcanbasic_INCLUDE_DIRS})
 message ("pcanbasic_LIB_DIRS: " ${pcanbasic_LIB_DIRS})
 message ("pcanbasic_LIBRARIES: " ${pcanbasic_LIBRARIES})
+
+message ("canfd_INCLUDE_DIRS: " ${canfd_INCLUDE_DIRS})
+message ("canfd_LIBRARIES: " ${canfd_LIBRARIES})
+message ("canfd_DLL: " ${canfd_DLL})
 
 
 #
@@ -98,6 +120,7 @@ message ("pcanbasic_LIBRARIES: " ${pcanbasic_LIBRARIES})
 include_directories(
     ${serial_INCLUDE_DIRS}
     ${pcanbasic_INCLUDE_DIRS}
+    ${canfd_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
@@ -150,8 +173,18 @@ target_link_libraries(${EXECUTABLE_NAME}
     # pthread
     ${serial_LIBRARIES}
     ${pcanbasic_LIBRARIES}
+    ${canfd_LIBRARIES}
     ${ohand_LIBRARIES}
 )
+
+# ControlCANFD.dll has to sit next to the executable at runtime
+if(WIN32 AND canfd_DLL)
+    add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${canfd_DLL}" "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>"
+        COMMENT "Copying ControlCANFD.dll"
+    )
+endif()
 
 set(INSTALL_TARGETS
     ${EXECUTABLE_NAME}
